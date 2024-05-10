@@ -1,17 +1,18 @@
 const { test, describe, expect, beforeEach } = require('@playwright/test');
+const { loginWith, createNote } = require('./helper')
 
 
 describe('Note app', () => {
     beforeEach(async ({ page, request }) => {
-        await request.post('http://localhost:3001/api/testing/reset')
-        await request.post('http://localhost:3001/api/users', {
+        await request.post('/api/testing/reset')
+        await request.post('/api/users', {
             data: {
                 name: "Aaron Valerio",
                 username: "user",
                 password: "password"
             }
         })
-        await page.goto('http://localhost:5173/')
+        await page.goto('')
     })
     test('La página principal se puede abrir.', async ({ page }) => {
         const locator = await page.getByText('Notes')
@@ -19,21 +20,13 @@ describe('Note app', () => {
         // await expect(page.getByText('Una nota creadad por playwright')).toBeVisible()
     });
 
-    test('El formulario de inicio de sesión se puede abrir.', async ({ page }) => {
-        // buscar los campos de texto con el id correspondiente e introducir el nombre de usuario y la contraseña en ellos
-        await page.getByRole('button', { name: 'log in' }).click()
-        await page.getByTestId('username').fill('user')
-        await page.getByTestId('password').fill('password')
-        await page.getByRole('button', { name: 'login' }).click()
-
+    test('usuario puede iniciar sesión', async ({ page }) => {
+        await loginWith(page, 'user', 'password')
         await expect(page.getByText('Aaron Valerio logged')).toBeVisible()
     });
 
     test('el inicio de sesión falla con la contraseña incorrecta', async ({ page }) => {
-        await page.getByRole('button', { name: 'log in' }).click()
-        await page.getByTestId('username').fill('user')
-        await page.getByTestId('password').fill('contraseña')
-        await page.getByRole('button', { name: 'login' }).click()
+        await loginWith(page, 'user', 'contraseña')
 
         const errorDiv = await page.locator('.error')
         await expect(errorDiv).toContainText('Wrong credentials')
@@ -46,31 +39,23 @@ describe('Note app', () => {
 
     describe('cuando inicia sesión', () => {
         beforeEach(async ({ page }) => {
-            await page.getByRole('button', { name: 'log in' }).click()
-            await page.getByTestId('username').fill('user')
-            await page.getByTestId('password').fill('password')
-            await page.getByRole('button', { name: 'login' }).click()
+            await loginWith(page, 'user', 'password')
         })
 
         test('se puede crear una nueva nota', async ({ page }) => {
-            await page.getByRole('button', { name: 'new note' }).click()
-            await page.getByRole('textbox').fill('Una nota creadad por playwright')
-            await page.getByRole('button', { name: 'Save' }).click()
+            await createNote(page, 'Una nota creadad por playwright', true)
             await expect(page.getByText('Una nota creadad por playwright')).toBeVisible()
         });
 
         describe('y existe una nota', () => {
             beforeEach(async ({ page }) => {
-                await page.getByRole('button', { name: 'new note' }).click()
-                await page.getByRole('textbox').fill('otra nota de playwright')
-                await page.getByRole('button', { name: 'Save' }).click()
+                await createNote(page, 'otra nota de playwright', true)
             })
 
             test('important se puede Cambiar', async ({ page }) => {
                 await page.getByRole('button', { name: 'make not important' }).click()
                 await expect(page.getByText('make important')).toBeVisible()
             });
-
         });
     });
 
